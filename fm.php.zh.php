@@ -1,5 +1,5 @@
 <?
-//a:11:{s:4:"lang";s:2:"zh";s:9:"auth_pass";s:32:"d41d8cd98f00b204e9800998ecf8427e";s:8:"quota_mb";i:0;s:17:"upload_ext_filter";a:0:{}s:19:"download_ext_filter";a:0:{}s:15:"error_reporting";s:0:"";s:7:"fm_root";s:0:"";s:17:"cookie_cache_time";i:1311763858;s:7:"version";s:5:"0.9.3";s:10:"os_charset";s:6:"gb2312";s:14:"client_charset";s:5:"utf-8";}
+//a:11:{s:4:"lang";s:2:"en";s:9:"auth_pass";s:32:"d41d8cd98f00b204e9800998ecf8427e";s:8:"quota_mb";i:0;s:17:"upload_ext_filter";a:0:{}s:19:"download_ext_filter";a:0:{}s:15:"error_reporting";s:0:"";s:7:"fm_root";s:0:"";s:17:"cookie_cache_time";i:1311850501;s:7:"version";s:5:"0.9.3";s:10:"os_charset";s:6:"gb2312";s:14:"client_charset";s:5:"utf-8";}
 /*--------------------------------------------------
  | PHP FILE MANAGER
  +--------------------------------------------------
