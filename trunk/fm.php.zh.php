@@ -48,7 +48,7 @@
     header("Cache-Control: no-store");
 
 	  $cfg = new config();
-    $cfg->load();
+    $cfg->load();// unescape will use $client_encoding $os_encoding
 
     foreach ($_GET as $key => $val) $$key=htmldecode($val);
     foreach ($_POST as $key => $val) $$key=htmldecode($val);
@@ -548,6 +548,9 @@ function total_size($arg) {
  return $total;
 }
 function total_delete($arg) {
+//var_dump('1110');
+//	var_dump($arg);
+//	exit();
  if (file_exists($arg)) {
    chmod($arg,0777);
    if (is_dir($arg)) {
@@ -576,6 +579,9 @@ function total_copy($orig,$dest) {
 }
 function total_move($orig,$dest) {
     // Just why doesn't it has a MOVE alias?!
+   //var_dump($orig);
+    //var_dump($dest);
+    //exit();
     return rename((string)$orig,(string)$dest);
 }
 function download(){
@@ -1261,7 +1267,7 @@ function dir_list_form() {
             document.location.href='".$path_info["basename"]."?frame=3&dir_atual='+escape('$dir_atual'+arg+'/');
         }
         function resolveIDs() {
-            document.location.href='".$path_info["basename"]."?frame=3&set_resolveIDs=1&dir_atual=$dir_atual';
+            document.location.href='".$path_info["basename"]."?frame=3&set_resolveIDs=1&dir_atual='+escape('$dir_atual');
         }
         var entry_list = new Array();
         // Custom object constructor
@@ -1479,12 +1485,12 @@ function dir_list_form() {
             return true;
         }
         function download(arg){
-                parent.frame1.location.href='".$path_info["basename"]."?action=3&dir_atual=$dir_atual&filename='+escape(arg);
+                parent.frame1.location.href='".$path_info["basename"]."?action=3&dir_atual='+escape('$dir_atual')+'&filename='+escape(arg);
         }
         function upload(){
                 var w = 400;
                 var h = 200;
-                window.open('".$path_info["basename"]."?action=10&dir_atual=$dir_atual', '', 'width='+w+',height='+h+',fullscreen=no,scrollbars=no,resizable=yes,status=no,toolbar=no,menubar=no,location=no');
+                window.open('".$path_info["basename"]."?action=10&dir_atual='+escape('$dir_atual'), '', 'width='+w+',height='+h+',fullscreen=no,scrollbars=no,resizable=yes,status=no,toolbar=no,menubar=no,location=no');
         }
         function execute(){
                 document.form_action.cmd_arg.value = prompt('".et('TypeCmd').".');
@@ -1712,7 +1718,7 @@ function dir_list_form() {
                                  <td bgcolor=\"#".$fm_color['Dir']."\" align=center>";
                      // Opções de diretório
                      if ( is_writable($dir_atual1.$file) ) $dir_out .= "
-                                 <td bgcolor=\"#FFFFFF\" align=center><a href=\"JavaScript:if(confirm('".et('ConfRem')." \\'".$file."\\' ?')) document.location.href='".$path_info["basename"]."?frame=3&action=8&cmd_arg=".$file."&dir_atual=$dir_atual'\">".et('Rem')."</a>
+                                 <td bgcolor=\"#FFFFFF\" align=center><a href=\"JavaScript:if(confirm('".et('ConfRem')." \\'".$file."\\' ?')) document.location.href='".$path_info["basename"]."?frame=3&action=8&cmd_arg=".$file."&dir_atual='+escape('$dir_atual')=$dir_atual'\">".et('Rem')."</a>
                                  <td bgcolor=\"#FFFFFF\" align=center><a href=\"JavaScript:rename('$file')\">".et('Ren')."</a>";
                      $dir_out .= "
                                  </tr>";
@@ -1728,7 +1734,7 @@ function dir_list_form() {
                                  <td bgcolor=\"#".$fm_color['File']."\">".$dir_entry["extt"];
                      // Opções de arquivo
                      if ( is_writable($dir_atual1.$file) ) $file_out .= "
-                                 <td bgcolor=\"#FFFFFF\" align=center><a href=\"javascript:if(confirm('".strtoupper(et('Rem'))." \\'".$file1."\\' ?')) document.location.href='".$path_info["basename"]."?frame=3&action=8&cmd_arg='+escape('".$file1."')+'&dir_atual=$dir_atual'\">".et('Rem')."</a>
+                                 <td bgcolor=\"#FFFFFF\" align=center><a href=\"javascript:if(confirm('".strtoupper(et('Rem'))." \\'".$file1."\\' ?')) document.location.href='".$path_info["basename"]."?frame=3&action=8&cmd_arg='+escape('".$file1."')+'&dir_atual='+escape('$dir_atual')\">".et('Rem')."</a>
                                  <td bgcolor=\"#FFFFFF\" align=center><a href=\"javascript:rename('$file1')\">".et('Ren')."</a>";
                      if ( is_readable($dir_atual1.$file) && (strpos(".wav#.mp3#.mid#.avi#.mov#.mpeg#.mpg#.rm#.iso#.bin#.img#.dll#.psd#.fla#.swf#.class#.ppt#.jpg#.gif#.png#.wmf#.eps#.bmp#.msi#.exe#.com#.rar#.tar#.zip#.bz2#.tbz2#.bz#.tbz#.bzip#.gzip#.gz#.tgz#", $dir_entry["ext"]."#" ) === false)) $file_out .= "
                                  <td bgcolor=\"#FFFFFF\" align=center><a href=\"javascript:edit_file('$file1')\">".et('Edit')."</a>";
@@ -1850,7 +1856,7 @@ function upload_form(){
         for ($x=0;$x<$num_uploads;$x++){
             $temp_file = $_FILES["file".$x]["tmp_name"];
             $filename = $_FILES["file".$x]["name"];
-            if (strlen($filename)) $resul = save_upload($temp_file,$filename,$dir_dest);
+            if (strlen($filename)) $resul = save_upload($temp_file,$filename,iconv($client_charset,$os_charset,$dir_dest));
             else $resul = 7;
             switch($resul){
                 case 1:
@@ -2246,12 +2252,16 @@ function config_form(){
     echo "</body>\n</html>";
 }
 function shell_form(){
-    global $dir_atual,$shell_form,$cmd_arg,$path_info,$dir_atual1;
+    global $dir_atual,$shell_form,$cmd_arg,$path_info,$dir_atual1,$os_charset,$client_charset;
     $data_out = "";
     if (strlen($cmd_arg)){
         exec($cmd_arg,$mat);
+        //var_dump($mat);
+
         if (count($mat)) $data_out = trim(implode("\n",$mat));
+
     }
+    $data_out = iconv($os_charset,$client_charset,$data_out);
     switch ($shell_form){
         case 1:
             html_header();
@@ -2278,8 +2288,10 @@ function shell_form(){
             echo "
             <script language=\"Javascript\" type=\"text/javascript\">
             <!--";
+           // var_dump(str_replace(array("<",">","\n"),array("[","]","\\n"),$data_out));
+//            var_dump($data_out);
             if (strlen($data_out)) echo "
-                var val = '# ".htmlencode($cmd_arg)."\\n".htmlencode(str_replace("<","[",str_replace(">","]",str_replace("\n","\\n",str_replace("\\","\\\\",$data_out)))))."\\n';
+                var val = '# ".htmlencode($cmd_arg)."\\n".htmlencode(str_replace(array("<",">","\\","\n"),array("[","]","\\\\","\\n"),$data_out))."\\n';
                 parent.frame1.document.data_form.data_out.value += val;";
             echo "
                 document.shell_form.cmd_arg.focus();
@@ -2434,6 +2446,7 @@ function frame3(){
     global $dir_dest,$dir_atual,$dir_antes,$dir_atual1;
     global $selected_file_list,$selected_dir_list,$old_name,$new_name;
     global $action,$or_by,$order_dir_list_by;
+    global $client_charset,$os_charset;
     if (!isset($order_dir_list_by)){
         $order_dir_list_by = "1A";
         setcookie("order_dir_list_by", $order_dir_list_by , $cookie_cache_time , "/");
@@ -2447,7 +2460,7 @@ function frame3(){
         switch ($action){
             case 1: // create dir
             if (strlen($cmd_arg)){
-                $cmd_arg = formatpath($dir_atual1.$cmd_arg);
+                $cmd_arg = iconv($client_charset,$os_charset,formatpath($dir_atual1.$cmd_arg));
                 if (!file_exists($cmd_arg)){
                     mkdir($cmd_arg,0777);
                     chmod($cmd_arg,0777);
@@ -2457,7 +2470,7 @@ function frame3(){
             break;
             case 2: // create arq
             if (strlen($cmd_arg)){
-                $cmd_arg = $dir_atual1.$cmd_arg;
+                $cmd_arg = iconv($client_charset,$os_charset,$dir_atual1.$cmd_arg);
                 if (!file_exists($cmd_arg)){
                     if ($fh = @fopen($cmd_arg, "w")){
                         @fclose($fh);
@@ -2468,27 +2481,37 @@ function frame3(){
             break;
             case 3: // rename arq ou dir
             if ((strlen($old_name))&&(strlen($new_name))){
+            		//var_dump($old_name);
+            		//var_dump($new_name);
+            		$old_name = iconv($client_charset,$os_charset,$old_name);
+            		$new_name = iconv($client_charset,$os_charset,$new_name);
+            		//var_dump($old_name);
+            		//var_dump($new_name);
+            		//var_dump($dir_atual1);
+            		//exit();
                 rename($dir_atual1.$old_name,$dir_atual1.$new_name);
                 if (is_dir($dir_atual1.$new_name)) reloadframe("parent",2);
             }
             break;
             case 4: // delete sel
+            //TODO here has a bug if fm_root_atual not set by user,programe will add double //
             if(strstr($dir_atual,$fm_root_atual)){
                 if (strlen($selected_file_list)){
                     $selected_file_list = explode("<|*|>",$selected_file_list);
                     if (count($selected_file_list)) {
                         for($x=0;$x<count($selected_file_list);$x++) {
                             $selected_file_list[$x] = trim($selected_file_list[$x]);
-                            if (strlen($selected_file_list[$x])) total_delete($dir_atual1.$selected_file_list[$x],$dir_dest.$selected_file_list[$x]);
+                            if (strlen($selected_file_list[$x])) total_delete($dir_atual1.iconv($client_charset,$os_charset,$selected_file_list[$x]));
                         }
                     }
                 }
+                exit();
                 if (strlen($selected_dir_list)){
                     $selected_dir_list = explode("<|*|>",$selected_dir_list);
                     if (count($selected_dir_list)) {
                         for($x=0;$x<count($selected_dir_list);$x++) {
                             $selected_dir_list[$x] = trim($selected_dir_list[$x]);
-                            if (strlen($selected_dir_list[$x])) total_delete($dir_atual1.$selected_dir_list[$x],$dir_dest.$selected_dir_list[$x]);
+                            if (strlen($selected_dir_list[$x])) total_delete($dir_atual1.iconv($client_charset,$os_charset,$selected_dir_list[$x]));
                         }
                         reloadframe("parent",2);
                     }
@@ -2503,7 +2526,7 @@ function frame3(){
                         if (count($selected_file_list)) {
                             for($x=0;$x<count($selected_file_list);$x++) {
                                 $selected_file_list[$x] = trim($selected_file_list[$x]);
-                                if (strlen($selected_file_list[$x])) total_copy($dir_atual1.$selected_file_list[$x],$dir_dest.$selected_file_list[$x]);
+                                if (strlen($selected_file_list[$x])) total_copy($dir_atual1.iconv($client_charset,$os_charset,$selected_file_list[$x]),iconv($client_charset,$os_charset,$dir_dest.$selected_file_list[$x]));
                             }
                         }
                     }
@@ -2512,7 +2535,7 @@ function frame3(){
                         if (count($selected_dir_list)) {
                             for($x=0;$x<count($selected_dir_list);$x++) {
                                 $selected_dir_list[$x] = trim($selected_dir_list[$x]);
-                                if (strlen($selected_dir_list[$x])) total_copy($dir_atual1.$selected_dir_list[$x],$dir_dest.$selected_dir_list[$x]);
+                                if (strlen($selected_dir_list[$x])) total_copy($dir_atual1.iconv($client_charset,$os_charset,$selected_dir_list[$x]),iconv($client_charset,$os_charset,$dir_dest.$selected_dir_list[$x]));
                             }
                             reloadframe("parent",2);
                         }
@@ -2529,7 +2552,7 @@ function frame3(){
                         if (count($selected_file_list)) {
                             for($x=0;$x<count($selected_file_list);$x++) {
                                 $selected_file_list[$x] = trim($selected_file_list[$x]);
-                                if (strlen($selected_file_list[$x])) total_move($dir_atual1.$selected_file_list[$x],$dir_dest.$selected_file_list[$x]);
+                                if (strlen($selected_file_list[$x])) total_move($dir_atual1.iconv($client_charset,$os_charset,$selected_file_list[$x]),iconv($client_charset,$os_charset,$dir_dest.$selected_file_list[$x]));
                             }
                         }
                     }
@@ -2538,7 +2561,7 @@ function frame3(){
                         if (count($selected_dir_list)) {
                             for($x=0;$x<count($selected_dir_list);$x++) {
                                 $selected_dir_list[$x] = trim($selected_dir_list[$x]);
-                                if (strlen($selected_dir_list[$x])) total_move($dir_atual1.$selected_dir_list[$x],$dir_dest.$selected_dir_list[$x]);
+                                if (strlen($selected_dir_list[$x])) total_move($dir_atual1.iconv($client_charset,$os_charset,$selected_dir_list[$x]),iconv($client_charset,$os_charset,$dir_dest.$selected_dir_list[$x]));
                             }
                             reloadframe("parent",2);
                         }
@@ -2549,6 +2572,7 @@ function frame3(){
             break;
             case 71: // compress sel
             if (strlen($cmd_arg)){
+            		$cmd_arg = iconv($client_charset,$os_charset,$cmd_arg);
                 ignore_user_abort(true);
                 ini_set("display_errors",0);
                 ini_set("max_execution_time",0);
@@ -2558,13 +2582,13 @@ function frame3(){
                 elseif (strstr($cmd_arg,".bzip")) $zipfile = new bzip_file($cmd_arg);
                 elseif (strstr($cmd_arg,".gzip")) $zipfile = new gzip_file($cmd_arg);
                 if ($zipfile){
-                    $zipfile->set_options(array('basedir'=>$dir_atual,'overwrite'=>1,'level'=>3));
+                    $zipfile->set_options(array('basedir'=>$dir_atual1,'overwrite'=>1,'level'=>3));
                     if (strlen($selected_file_list)){
                         $selected_file_list = explode("<|*|>",$selected_file_list);
                         if (count($selected_file_list)) {
                             for($x=0;$x<count($selected_file_list);$x++) {
                                 $selected_file_list[$x] = trim($selected_file_list[$x]);
-                                if (strlen($selected_file_list[$x])) $zipfile->add_files($selected_file_list[$x]);
+                                if (strlen($selected_file_list[$x])) $zipfile->add_files(iconv($client_charset,$os_charset,$selected_file_list[$x]));
                             }
                         }
                     }
@@ -2573,7 +2597,7 @@ function frame3(){
                         if (count($selected_dir_list)) {
                             for($x=0;$x<count($selected_dir_list);$x++) {
                                 $selected_dir_list[$x] = trim($selected_dir_list[$x]);
-                                if (strlen($selected_dir_list[$x])) $zipfile->add_files($selected_dir_list[$x]);
+                                if (strlen($selected_dir_list[$x])) $zipfile->add_files(iconv($client_charset,$os_charset,$selected_dir_list[$x]));
                             }
                         }
                     }
@@ -2584,6 +2608,7 @@ function frame3(){
             break;
             case 72: // decompress arq
             if (strlen($cmd_arg)){
+            $cmd_arg = iconv($client_charset,$os_charset,$cmd_arg);
                 if (file_exists($dir_atual1.$cmd_arg)){
                     $zipfile=false;
                     if (strstr($cmd_arg,".zip")) zip_extract();
@@ -2591,7 +2616,7 @@ function frame3(){
                     elseif (strstr($cmd_arg,".gzip")||strstr($cmd_arg,".gz")||strstr($cmd_arg,".tgz")) $zipfile = new gzip_file($cmd_arg);
                     elseif (strstr($cmd_arg,".tar")) $zipfile = new tar_file($cmd_arg);
                     if ($zipfile){
-                        $zipfile->set_options(array('basedir'=>$dir_atual,'overwrite'=>1));
+                        $zipfile->set_options(array('basedir'=>$dir_atual1,'overwrite'=>1));
                         $zipfile->extract_files();
                     }
                     unset($zipfile);
@@ -2601,6 +2626,7 @@ function frame3(){
             break;
             case 8: // delete arq/dir
             if (strlen($cmd_arg)){
+            		$cmd_arg = iconv($client_charset,$os_charset,$cmd_arg);
                 if (file_exists($dir_atual1.$cmd_arg)) total_delete($dir_atual1.$cmd_arg);
                 if (is_dir($dir_atual1.$cmd_arg)) reloadframe("parent",2);
             }
