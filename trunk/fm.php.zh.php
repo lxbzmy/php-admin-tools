@@ -313,7 +313,7 @@ function et($tag){
     $zh['SavePass'] = '保存密码';
     $zh['SaveFile'] = '保存文件';
     $zh['Save'] = '保存';
-    $zh['Leave'] = '留下';
+    $zh['Leave'] = '退出';
     $zh['Edit'] = '编辑';
     $zh['View'] = '查看';
     $zh['Config'] = '配置';
@@ -331,15 +331,15 @@ function et($tag){
     $zh['Upload'] = '上传';
     $zh['UploadEnd'] = '上传完成';
     $zh['Perms'] = '权限';
-    $zh['Owner'] = '业主';
-    $zh['Group'] = '集团';
+    $zh['Owner'] = '所有者';
+    $zh['Group'] = '组';
     $zh['Other'] = '其他';
-    $zh['Size'] = '尺寸';
+    $zh['Size'] = '大小';
     $zh['Date'] = '日期';
     $zh['Type'] = '类型';
-    $zh['Free'] = '免费的';
-    $zh['Shell'] = '壳牌';
-    $zh['Read'] = '阅读';
+    $zh['Free'] = '可用空间';
+    $zh['Shell'] = '命令行';
+    $zh['Read'] = '读';
     $zh['Write'] = '写';
     $zh['Exec'] = '执行';
     $zh['Apply'] = '应用';
@@ -376,7 +376,7 @@ function et($tag){
     $zh['InvPass'] = '无效的密码';
     $zh['ReadDenied'] = '读访问被拒绝';
     $zh['FileNotFound'] = '文件未找到';
-    $zh['AutoClose'] = '关闭在完成';
+    $zh['AutoClose'] = '完成后关闭';
     $zh['OutDocRoot'] = '文件超越DOCUMENT_ROOT';
     $zh['NoCmd'] = '错误：命令没有告知';
     $zh['ConfTrySave'] = '没有写permisson文件\ \ n请保存反正';
@@ -387,7 +387,7 @@ function et($tag){
     $zh['NoReturn'] = '不归路';
     $zh['FileSent'] = '文件发送';
     $zh['SpaceLimReached'] = '达到空间限制';
-    $zh['InvExt'] = '无效的延伸';
+    $zh['InvExt'] = '不支持的扩展名';
     $zh['FileNoOverw'] = '文件不能被覆盖';
     $zh['FileOverw'] = '文件覆盖';
     $zh['FileIgnored'] = '文件被忽略';
@@ -400,11 +400,11 @@ function et($tag){
     $zh['NoFileSel'] = '没有文件选择';
     $zh['SelAll'] = '所有';
     $zh['SelNone'] = '无';
-    $zh['SelInverse'] = '逆';
+    $zh['SelInverse'] = '反选';
     $zh['Selected_s'] = '选择';
     $zh['Total'] = '共';
     $zh['Partition'] = '分区';
-    $zh['RenderTime'] = '时间呈现此页';
+    $zh['RenderTime'] = '呈现此页用时';
     $zh['Seconds'] = '秒';
     $zh['ErrorReport'] = '错误报告';
 
