@@ -6,7 +6,11 @@ and
 PhpConcept Library - Zip Module 2.8
 
 important:
-I patch extract_files() method changed chdir and open_archive()  order
+ 1. I patch extract_files() method changed chdir and open_archive()  order
+ 2. add listContents() method in tar_file object to support list zipped file contents
+ 3. add smalll patch at pclzip.privExtractFile #4897(blank 'else block') to support new options  PCLZIP_OPT_OVERWRITE;
+ 4. add remove_patch at tar_file.extract_files(); to act as pclzip.extract() Behavior.
+
 */
 
 ?><?php
@@ -400,16 +404,167 @@ class tar_file extends archive
 
 	function extract_files()
 	{
+		$ret = array();
 		$pwd = getcwd();
-	
-
+		
+		//patch to support remove_path 
+		$p_remove_path = $this->options['remove_path'];
+		if (($p_remove_path != "") && (substr($p_remove_path, -1) != '/'))
+		{
+			$p_remove_path .= '/';
+		}
+		$p_remove_path_size = strlen($p_remove_path);
+		//end 
+		
 		if ($fp = $this->open_archive())
 		{
+			if(file_exists($this->options['basedir'])){
+				if(is_dir($this->options['basedir'])){
+				}else{
+				$this->error[] = "destination is not a dir {$this->options['basedir']} .";
+				}
+			}else{
+				mkdir($this->options['basedir']);
+			}
 		
 			chdir($this->options['basedir']);//this is move from 404;
 			if ($this->options['inmemory'] == 1)
 				$this->files = array ();
 
+			while ($block = fread($fp, 512))
+			{
+				$temp = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1type/a100symlink/a6magic/a2temp/a32temp/a32temp/a8temp/a8temp/a155prefix/a12temp", $block);
+				$file = array (
+					'name' => $temp['prefix'] . $temp['name'],
+					'stat' => array (
+						2 => $temp['mode'],
+						4 => octdec($temp['uid']),
+						5 => octdec($temp['gid']),
+						7 => octdec($temp['size']),
+						9 => octdec($temp['mtime']),
+					),
+					'checksum' => octdec($temp['checksum']),
+					'type' => $temp['type'],
+					'magic' => $temp['magic'],
+				);
+				if ($file['checksum'] == 0x00000000)
+				{
+					break;
+				}
+				else if (substr($file['magic'], 0, 5) != "ustar")
+				{
+					$this->error[] = "This script does not support extracting this type of tar file.";
+					break;
+				}
+				$block = substr_replace($block, "        ", 148, 8);
+				$checksum = 0;
+				for ($i = 0; $i < 512; $i++)
+					$checksum += ord(substr($block, $i, 1));
+				if ($file['checksum'] != $checksum)
+					$this->error[] = "Could not extract from {$this->options['name']}, it is corrupt.";
+
+				//patch add replace_path support
+				if ($p_remove_path != "")
+				{
+	
+				  if (substr($file['name'], 0, $p_remove_path_size) == $p_remove_path)
+				  {
+					//--(MAGIC-PclTrace)--//PclTraceFctMessage(__FILE__, __LINE__, 3, "Found path '$p_remove_path' to remove in file '".$p_entry['name']."'");
+
+					// ----- Remove the path
+					$file['name'] = substr($file['name'], $p_remove_path_size);
+
+					//--(MAGIC-PclTrace)--//PclTraceFctMessage(__FILE__, __LINE__, 3, "Resulting file is '".$p_entry['filename']."'");
+				  }
+				}
+				//var_dump($remove_path);
+				
+					
+					
+					
+				if ($this->options['inmemory'] == 1)
+				{
+					$file['data'] = fread($fp, $file['stat'][7]);
+					fread($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512));
+					unset ($file['checksum'], $file['magic']);
+					$this->files[] = $file;
+				}
+				else if ($file['type'] == 5)
+				{
+					if (!is_dir($file['name']))
+						mkdir($file['name'], $file['stat'][2]);
+				}
+				else if ($this->options['overwrite'] == 0 && file_exists($file['name']))
+				{
+					//$this->error[] = "{$file['name']} already exists.";
+					
+					//patch continue seek next file other than break out;
+					
+					if ($file['type'] == 2)
+					{				
+					}
+					else
+					{
+						fseek($fp, $file['stat'][7],SEEK_CUR );
+						fseek($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512),SEEK_CUR);
+						$file['status'] = 'exists';
+					}
+				
+					//end
+					
+					$ret[] = $file;
+					continue;
+				}
+				else if ($file['type'] == 2)
+				{
+					symlink($temp['symlink'], $file['name']);
+					chmod($file['name'], $file['stat'][2]);
+				}
+				else if ($new = @fopen($file['name'], "wb"))
+				{
+					fwrite($new, fread($fp, $file['stat'][7]));
+					fread($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512));
+					fclose($new);
+					chmod($file['name'], $file['stat'][2]);
+					$file['status'] = 'ok';
+				}
+				else
+				{
+					$file['status'] = 'error';
+					$this->error[] = "Could not open {$file['name']} for writing.";
+					$ret[] = $file;
+					continue;
+				}
+				chown($file['name'], $file['stat'][4]);
+				chgrp($file['name'], $file['stat'][5]);
+				touch($file['name'], $file['stat'][9]);
+				
+				$file['status']='ok';
+				$ret[] = $file;
+				unset ($file);
+				
+				
+			}
+		}
+		else
+			$this->error[] = "Could not open file {$this->options['name']}";
+
+		chdir($pwd);
+		return $ret;
+	}
+
+	function open_archive()
+	{
+		return @fopen($this->options['name'], "rb");
+	}
+	
+	/**
+	* !notice! add patch to support preview files info in tar zip.
+	*/
+	function listContents(){
+		$re = array();
+		if ($fp = $this->open_archive())
+		{
 			while ($block = fread($fp, 512))
 			{
 				$temp = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8checksum/a1type/a100symlink/a6magic/a2temp/a32temp/a32temp/a8temp/a8temp/a155prefix/a12temp", $block);
@@ -440,55 +595,20 @@ class tar_file extends archive
 				if ($file['checksum'] != $checksum)
 					$this->error[] = "Could not extract from {$this->options['name']}, it is corrupt.";
 
-				if ($this->options['inmemory'] == 1)
-				{
-					$file['data'] = fread($fp, $file['stat'][7]);
-					fread($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512));
-					unset ($file['checksum'], $file['magic']);
-					$this->files[] = $file;
-				}
-				else if ($file['type'] == 5)
-				{
-					if (!is_dir($file['name']))
-						mkdir($file['name'], $file['stat'][2]);
-				}
-				else if ($this->options['overwrite'] == 0 && file_exists($file['name']))
-				{
-					$this->error[] = "{$file['name']} already exists.";
-					continue;
-				}
-				else if ($file['type'] == 2)
-				{
-					symlink($temp['symlink'], $file['name']);
-					chmod($file['name'], $file['stat'][2]);
-				}
-				else if ($new = @fopen($file['name'], "wb"))
-				{
-					fwrite($new, fread($fp, $file['stat'][7]));
-					fread($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512));
-					fclose($new);
-					chmod($file['name'], $file['stat'][2]);
-				}
-				else
-				{
-					$this->error[] = "Could not open {$file['name']} for writing.";
-					continue;
-				}
-				chown($file['name'], $file['stat'][4]);
-				chgrp($file['name'], $file['stat'][5]);
-				touch($file['name'], $file['stat'][9]);
+				//seek to next pointer
+					fseek($fp, $file['stat'][7],SEEK_CUR );
+					fseek($fp, (512 - $file['stat'][7] % 512) == 512 ? 0 : (512 - $file['stat'][7] % 512),SEEK_CUR);
+					//unset ($file['checksum'], $file['magic']);
+					//$this->files[] = $file;
+				
+				$re[] = $file;
 				unset ($file);
 			}
 		}
 		else
 			$this->error[] = "Could not open file {$this->options['name']}";
-
-		chdir($pwd);
-	}
-
-	function open_archive()
-	{
-		return @fopen($this->options['name'], "rb");
+		
+		return $re;
 	}
 }
 
@@ -833,6 +953,8 @@ class zip_file extends archive
   define( 'PCLZIP_OPT_ADD_TEMP_FILE_ON', 77021 ); // alias
   define( 'PCLZIP_OPT_TEMP_FILE_OFF', 77022 );
   define( 'PCLZIP_OPT_ADD_TEMP_FILE_OFF', 77022 ); // alias
+  
+  define( 'PCLZIP_OPT_OVERWRITE', 77023 ); // patched new options overwrite force when extract files;
   
   // ----- File description attributes
   define( 'PCLZIP_ATT_FILE_NAME', 79001 );
@@ -1465,7 +1587,8 @@ class zip_file extends archive
                                                    ,PCLZIP_OPT_EXTRACT_DIR_RESTRICTION => 'optional',
                                                    PCLZIP_OPT_TEMP_FILE_THRESHOLD => 'optional',
                                                    PCLZIP_OPT_TEMP_FILE_ON => 'optional',
-                                                   PCLZIP_OPT_TEMP_FILE_OFF => 'optional'
+                                                   PCLZIP_OPT_TEMP_FILE_OFF => 'optional',
+												   PCLZIP_OPT_OVERWRITE=>'optional'
 												    ));
         if ($v_result != 1) {
           //--(MAGIC-PclTrace)--//PclTraceFctEnd(__FILE__, __LINE__, 0);
@@ -2513,6 +2636,7 @@ class zip_file extends archive
         case PCLZIP_OPT_NO_COMPRESSION :
         case PCLZIP_OPT_EXTRACT_IN_OUTPUT :
         case PCLZIP_OPT_REPLACE_NEWER :
+		case PCLZIP_OPT_OVERWRITE:
         case PCLZIP_OPT_STOP_ON_ERROR :
           $v_result_list[$p_options_list[$i]] = true;
           //--(MAGIC-PclTrace)--//PclTraceFctMessage(__FILE__, __LINE__, 2, "".PclZipUtilOptionText($p_options_list[$i])." = '".$v_result_list[$p_options_list[$i]]."'");
@@ -4839,6 +4963,13 @@ class zip_file extends archive
       }
       else {
         //--(MAGIC-PclTrace)--//PclTraceFctMessage(__FILE__, __LINE__, 2, "Existing file '".$p_entry['filename']."' is older than the extrated one - will be replaced by the extracted one (".date("l dS of F Y h:i:s A", filemtime($p_entry['filename'])).") than the extracted file (".date("l dS of F Y h:i:s A", $p_entry['mtime']).")");
+		if(    (isset($p_options[PCLZIP_OPT_OVERWRITE]))
+		        && ($p_options[PCLZIP_OPT_OVERWRITE]===true) ){
+			$p_entry['status'] = "ok";
+		}else{
+		    $p_entry['status'] = "file_exist";
+		}
+		
       }
     }
 
