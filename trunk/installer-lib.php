@@ -1,11 +1,14 @@
 <?php
 /*
 This file join 
+1.
 TAR/GZIP/BZIP2/ZIP ARCHIVE CLASSES 2.1
+get source at http://www.phpclasses.org/package/945-PHP-Create-tar-gzip-bzip2-zip-extract-tar-gzip-bzip2-.html
 and 
-PhpConcept Library - Zip Module 2.8
+2.PhpConcept Library - Zip Module 2.8
+get source at http://www.phpconcept.net/pclzip
 
-important:
+important! what patched:
  1. I patch extract_files() method changed chdir and open_archive()  order
  2. add listContents() method in tar_file object to support list zipped file contents
  3. add smalll patch at pclzip.privExtractFile #4897(blank 'else block') to support new options  PCLZIP_OPT_OVERWRITE;
