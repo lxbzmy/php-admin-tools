@@ -2,6 +2,23 @@
 define("BR","<br/>\r\n");
 $file = "";
 $path = dirname(__FILE__);
+
+
+function byte_convert($bytes)
+  {
+    $symbol = array('B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+
+    $exp = 0;
+    $converted_value = 0;
+    if( $bytes > 0 )
+    {
+      $exp = floor( log($bytes)/log(1024) );
+      $converted_value = ( $bytes/pow(1024,floor($exp)) );
+    }
+
+    return sprintf( '%.2f '.$symbol[$exp], $converted_value );
+  }
+  
  function http_get_file($remote_url, $local_file)    {
         
         $fp = fopen($local_file, 'w');
@@ -11,10 +28,12 @@ $path = dirname(__FILE__);
         
         $buffer = curl_exec($cp);
         
+		$st = "speed:".byte_convert(curl_getInfo( $cp, CURLINFO_SPEED_DOWNLOAD  )).'/s';
         curl_close($cp);
         fclose($fp);
-        
-        return true;
+		
+		
+        return $st;
     }
 
 if(isset ($_POST['remoteGet'] )){
@@ -24,8 +43,8 @@ if(isset ($_POST['remoteGet'] )){
 	$timeout=$_POST['timeout'];
     $filename = dirname($path).DIRECTORY_SEPARATOR .$name;
     set_time_limit($timeout);
- 	http_get_file($url,$filename);
-	$msg="完成".$filename;
+	$s = http_get_file($url,$filename);
+	$msg="完成".$filename.BR.$s;
 	$file = realpath ($filename);
 }
 
@@ -212,7 +231,7 @@ if(isset ($_POST['unzip'] )){
     <div class="row">
       <label> remote file(远程文件)： </label>
       <div class="field">
-        <input name="url" type="text" id="url" size="100" style="width:500px" value="<?php echo $url;?>" >
+        <input name="url" type="text" id="url" size="100" style="width:700px" value="<?php echo $url;?>" onChange="{var m = this.value.match(/[^/\\]*\.\w+$/);if(m){this.form.elements['name'].value=m[0]}}" >
         <p class="help-text">例如：http://cn.wordpress.org/wordpress-3.4.1-zh_CN.zip </p>
       </div>
     </div>
@@ -227,10 +246,10 @@ if(isset ($_POST['unzip'] )){
     <div class="row">
       <label> save as 另存为： </label>
       <div class="field">
-        <input name="path" type="text" id="path" value="<?php echo $path;?>" size="80">
+        <input name="path" type="text" id="path" value="<?php echo $path;?>" size="80" style="width:400px">
         文件名
-        <input name="name" type="text" id="name" style="width:200px" value="<?php echo $name;?>" size="20">
-        <p class="help-text">默认保存到当前目录下面本文件的同目录。</p>
+        <input name="name" type="text" id="name" style="width:300px" value="<?php echo $name;?>" size="20">
+        <p class="help-text">默认保存到当前目录下面(this php file)。</p>
       </div>
     </div>
     <div class="row">
@@ -245,14 +264,14 @@ if(isset ($_POST['unzip'] )){
 <p>&nbsp;</p>
 <div class="stylized myform standard-form">
   <form action="" method="post" id="form2">
-    <h1>unzip file to server 解压缩 </h1>
+    <h1>unzip file to server 解压缩 (zlib<?php echo function_exists("gzopen")==true?"可用":'<span class="error">不可用</span>'?>)</h1>
     <p class="sub">解压缩下载完毕的应用程序。支持zip,tar.gz两种，为什么没有rar因为几乎所有的发行包选择用zip或者tar来打包。</p>
     <p>&nbsp;</p>
     <div class="row">
       <label>server file(服务器文件： </label>
       <div class="field">
         <input name="file" type="text" id="file" size="100" value="<?php echo $filename?>" style="width:500px">
-      <a href="#" target="_blank" id="#" style="font-size:12px" onClick="this.href='?listzip='+document.getElementById('form2').file.value">预览压缩包</a> 
+      <a href="#" target="_blank" id="#" style="font-size:12px" onClick="this.href='?listzip='+document.getElementById('form2').file.value">预览压缩包(view zip contents)</a> 
       
       </div>
     </div>
@@ -275,13 +294,13 @@ if(isset ($_POST['unzip'] )){
         <p>
           <label class="checkbox">
             <input name="removeRoot" type="checkbox" class="optional" id="removeRoot" value="1" <?php echo $removeRoot==true?"checked":""?>>
-            remove root folder in zip(剥去顶层的文件夹
+            remove zip file's root folder when extract(剥去顶层的文件夹
             )</label>
         </p>
         <p>
           <label class="checkbox">
             <input name="overwrite" type="checkbox" class="optional" id="overwrite" value="1" <?php  echo $overwrite==true?"checked":""?>>
-            overwrite exsists file (覆盖已存在的文件夹
+            overwrite exists file (覆盖已存在的文件夹
             )</label>
         </p>
         <p class="help-text">设置解压缩参数。</p>
